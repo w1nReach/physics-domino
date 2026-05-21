@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Свяжи физику</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e2937, #312e81);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h1 {
+            font-size: 3.2rem;
+            background: linear-gradient(90deg, #67e8f9, #a5b4fc, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(103, 232, 249, 0.5);
+        }
+        .subtitle { 
+            color: #94a3b8; 
+            font-size: 1.25rem; 
+            margin-top: 8px;
+        }
+
+        .game {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            flex-wrap: wrap;
+        }
+        .column {
+            background: rgba(15, 23, 42, 0.85);
+            border-radius: 20px;
+            padding: 20px;
+            width: 290px;
+            border: 1px solid #475569;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+        .column h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #67e8f9;
+            text-shadow: 0 0 10px rgba(103, 232, 249, 0.3);
+        }
+        .item {
+            background: #1e2937;
+            padding: 18px;
+            margin: 10px 0;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-size: 1.1rem;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        .item:hover {
+            background: #334155;
+            transform: translateY(-4px);
+        }
+        .item.selected {
+            border-color: #67e8f9;
+            background: #1e40af;
+            box-shadow: 0 0 25px rgba(103, 232, 249, 0.6);
+            transform: scale(1.05);
+        }
+        .item.correct {
+            background: #166534;
+            border-color: #4ade80;
+            box-shadow: 0 0 25px rgba(74, 222, 128, 0.6);
+            animation: correctPop 0.6s ease;
+        }
+
+        @keyframes correctPop {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        .connections {
+            margin: 50px auto;
+            max-width: 900px;
+            background: rgba(15, 23, 42, 0.8);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid #475569;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        .match {
+            display: inline-block;
+            background: linear-gradient(135deg, #166534, #14532d);
+            color: #86efac;
+            padding: 14px 24px;
+            margin: 10px;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+            animation: matchAppear 0.5s ease;
+        }
+
+        @keyframes matchAppear {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #status {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            min-height: 50px;
+        }
+
+        .final {
+            text-align: center;
+            font-size: 2rem;
+            margin: 30px 0;
+            animation: finalPop 1s ease;
+        }
+
+        @keyframes finalPop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Свяжи физику</h1>
+        <p class="subtitle">Соедини правильные формулы, величины и учёных</p>
+    </div>
+
+    <div class="game">
+        <div class="column" id="formulas">
+            <h2>Формулы</h2>
+        </div>
+        <div class="column" id="concepts">
+            <h2>Что это</h2>
+        </div>
+        <div class="column" id="scientists">
+            <h2>Учёные</h2>
+        </div>
+    </div>
+
+    <div class="connections">
+        <h2 style="text-align:center; margin-bottom:20px; color:#67e8f9;">Связи</h2>
+        <div id="matches"></div>
+        <p id="status"></p>
+    </div>
+
+    <script>
+        const correctMatches = {
+            "v = s / t": { concept: "Скорость", scientist: "Галилей" },
+            "F = m × g": { concept: "Сила тяжести", scientist: "Ньютон" },
+            "A = F × s": { concept: "Работа", scientist: "Джоуль" },
+            "p = F / S": { concept: "Давление", scientist: "Паскаль" },
+            "ρ = m / V": { concept: "Плотность", scientist: "Архимед" }
+        };
+
+        let selection = [];
+        let usedItems = new Set();
+
+        const data = {
+            formulas: ["v = s / t", "F = m × g", "A = F × s", "p = F / S", "ρ = m / V"],
+            concepts: ["Скорость", "Сила тяжести", "Работа", "Давление", "Плотность"],
+            scientists: ["Галилей", "Ньютон", "Джоуль", "Паскаль", "Архимед"]
+        };
+
+        function shuffle(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        function createItems() {
+            const columns = {
+                formulas: document.getElementById('formulas'),
+                concepts: document.getElementById('concepts'),
+                scientists: document.getElementById('scientists')
+            };
+
+            Object.keys(columns).forEach(key => {
+                const col = columns[key];
+                col.innerHTML = `<h2>${key === 'formulas' ? 'Формулы' : key === 'concepts' ? 'Что это' : 'Учёные'}</h2>`;
+                
+                const shuffled = shuffle([...data[key]]);
+                
+                shuffled.forEach(text => {
+                    if (usedItems.has(text)) return;
+                    const div = document.createElement('div');
+                    div.className = 'item';
+                    div.textContent = text;
+                    div.onclick = () => selectItem(div, key === 'formulas' ? 'formula' : key === 'concepts' ? 'concept' : 'scientist', text);
+                    col.appendChild(div);
+                });
+            });
+        }
+
+        function selectItem(element, type, text) {
+            const existing = selection.find(s => s.text === text);
+            if (existing) {
+                selection = selection.filter(s => s.text !== text);
+                element.classList.remove('selected');
+                return;
+            }
+
+            element.classList.add('selected');
+            selection = selection.filter(s => s.type !== type);
+            selection.push({type, text, element});
+
+            checkSelection();
+        }
+
+        function checkSelection() {
+            const status = document.getElementById('status');
+
+            if (selection.length === 3) {
+                const formula = selection.find(s => s.type === 'formula')?.text;
+                const concept = selection.find(s => s.type === 'concept')?.text;
+                const scientist = selection.find(s => s.type === 'scientist')?.text;
+
+                const correct = correctMatches[formula];
+
+                if (correct && correct.concept === concept && correct.scientist === scientist) {
+                    addMatch(formula, concept, scientist);
+                    
+                    selection.forEach(s => {
+                        usedItems.add(s.text);
+                        s.element.classList.add('correct');
+                    });
+
+                    status.innerHTML = "✅ Отлично! Правильная связь!";
+                    status.style.color = "#4ade80";
+
+                    createConfetti();
+
+                    setTimeout(() => {
+                        selection.forEach(s => s.element.remove());
+                        selection = [];
+                        checkGameComplete();
+                    }, 800);
+                } else {
+                    status.innerHTML = "❌ Неверная связь. Попробуй ещё.";
+                    status.style.color = "#f87171";
+
+                    setTimeout(() => {
+                        selection = [];
+                        document.querySelectorAll('.item').forEach(el => el.classList.remove('selected'));
+                    }, 1500);
+                }
+            }
+        }
+
+        function addMatch(formula, concept, scientist) {
+            const container = document.getElementById('matches');
+            const div = document.createElement('div');
+            div.className = 'match';
+            div.innerHTML = `<strong>${formula}</strong><br>${concept} — ${scientist}`;
+            container.appendChild(div);
+        }
+
+        function checkGameComplete() {
+            if (usedItems.size === 5) {
+                const status = document.getElementById('status');
+                status.innerHTML = `
+                    <div class="final">🎉 Поздравляем!<br>Ты отлично связал физику!</div>
+                    <p style="font-size:1.3rem; margin-top:20px;">Обнови страницу, чтобы сыграть ещё раз</p>
+                `;
+                status.style.color = "#67e8f9";
+            }
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 100; i++) {
+                setTimeout(() => {
+                    const c = document.createElement('div');
+                    c.style.position = 'fixed';
+                    c.style.left = Math.random() * 100 + 'vw';
+                    c.style.top = '-20px';
+                    c.style.width = '12px';
+                    c.style.height = '12px';
+                    c.style.background = ['#67e8f9','#a5b4fc','#4ade80','#f472b6'][Math.floor(Math.random()*4)];
+                    c.style.opacity = Math.random() * 0.8 + 0.6;
+                    c.style.zIndex = 1000;
+                    document.body.appendChild(c);
+
+                    let y = -20;
+                    const anim = setInterval(() => {
+                        y += 7 + Math.random() * 8;
+                        c.style.top = y + 'px';
+                        if (y > window.innerHeight + 50) {
+                            clearInterval(anim);
+                            c.remove();
+                        }
+                    }, 25);
+                }, i * 6);
+            }
+        }
+
+        // Запуск с перемешиванием
+        window.onload = createItems;
+    </script>
+</body>
+</html>
